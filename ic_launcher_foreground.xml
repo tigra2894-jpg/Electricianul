@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- trei fire: maro, albastru, galben-verde -->
+    <path android:strokeColor="#8B5A2B" android:strokeWidth="6" android:strokeLineCap="round" android:pathData="M22,40 L44,40"/>
+    <path android:strokeColor="#2F6FE0" android:strokeWidth="6" android:strokeLineCap="round" android:pathData="M22,54 L44,54"/>
+    <path android:strokeColor="#2E9B5E" android:strokeWidth="6" android:strokeLineCap="round" android:pathData="M22,68 L44,68"/>
+    <path android:strokeColor="#F5C400" android:strokeWidth="6" android:strokeLineCap="butt" android:pathData="M27,68 L31,68 M37,68 L41,68"/>
+    <!-- fulger galben -->
+    <path android:fillColor="#F5C400" android:pathData="M64,26 L50,58 L60,58 L54,82 L74,48 L63,48 Z"/>
+</vector>

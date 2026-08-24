@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Electricianul</title>
+<style>
+  :root{
+    --bg:#0E1320; --card:#172035; --edge:rgba(255,255,255,.09); --ink:#EEF1F7; --mut:#9AA6BF;
+    --gold:#F5C400; --orange:#E85D04; --ok:#2ECC71; --bad:#FF5A5A;
+    --L:#8B5A2B; --N:#2F6FE0; --PE:#2E9B5E; --PEy:#F5C400; --ret:#141414; --gry:#8E98A8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+  html,body{width:100%;height:100%;background:var(--bg);color:var(--ink);
+    font-family:'Segoe UI',Roboto,'Helvetica Neue',system-ui,sans-serif;overscroll-behavior:none}
+  body{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  button{font-family:inherit}
+  .screen{display:none;min-height:100%;padding:calc(14px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom))}
+  .screen.on{display:block}
+
+  /* ---------- acasă ---------- */
+  .brand{text-align:center;padding:18px 0 8px}
+  .brand h1{font-size:clamp(28px,8.6vw,46px);font-weight:900;letter-spacing:.04em;line-height:1;
+    background:linear-gradient(92deg,var(--gold),#FF9F1C 60%,var(--orange));
+    -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 18px rgba(245,196,0,.25))}
+  .brand .sub{margin-top:6px;font-size:12px;letter-spacing:.4em;text-transform:uppercase;color:var(--mut);font-weight:700}
+  .total{margin:12px auto 4px;text-align:center;font-size:13px;color:var(--mut);letter-spacing:.1em}
+  .total b{color:var(--gold);font-size:18px}
+  .lv{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--edge);border-radius:16px;
+    padding:14px 12px;margin:10px 0;width:100%;text-align:left;color:var(--ink)}
+  .lv:active{transform:scale(.985)}
+  .lv.lock{opacity:.45}
+  .lv .n{width:40px;height:40px;border-radius:12px;background:rgba(245,196,0,.14);color:var(--gold);
+    font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;flex:none}
+  .lv .t{flex:1}
+  .lv .t b{display:block;font-size:16px}
+  .lv .t span{font-size:12.5px;color:var(--mut)}
+  .lv .s{font-size:15px;letter-spacing:.05em;color:var(--gold);white-space:nowrap}
+  .lv .s i{font-style:normal;opacity:.25}
+  .howto{margin-top:14px;font-size:12.5px;line-height:1.6;color:var(--mut);text-align:center}
+  .tiny{display:block;margin:18px auto 0;background:none;border:0;color:var(--mut);font-size:12px;text-decoration:underline}
+
+  /* ---------- joc ---------- */
+  .top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .top button{width:40px;height:40px;border-radius:12px;border:1px solid var(--edge);background:var(--card);color:var(--ink);font-size:18px}
+  .top .ttl{flex:1}
+  .top .ttl b{display:block;font-size:17px}
+  .top .ttl span{font-size:12px;color:var(--mut)}
+  .top .pts{font-size:13px;color:var(--gold);font-weight:800;letter-spacing:.05em}
+  .task{background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:12px 14px;font-size:15.5px;line-height:1.45;margin:8px 0}
+  .task b{color:var(--gold)}
+  .panel{background:#F5F7FA;border-radius:16px;padding:6px;margin:8px 0;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  .panel svg{width:100%;height:auto;display:block}
+  .row{display:flex;gap:10px;margin:10px 0}
+  .btn{flex:1;border:0;border-radius:12px;padding:15px 12px;font-size:15px;font-weight:800;letter-spacing:.04em;color:#111;background:var(--gold)}
+  .btn.alt{background:var(--card);color:var(--ink);border:1px solid var(--edge)}
+  .btn:active{transform:scale(.97)}
+  .btn:disabled{opacity:.4}
+  .msg{border-radius:12px;padding:11px 13px;font-size:14.5px;line-height:1.45;margin:8px 0;display:none}
+  .msg.on{display:block}
+  .msg.ok{background:rgba(46,204,113,.14);color:#9BEFBF;border:1px solid rgba(46,204,113,.35)}
+  .msg.bad{background:rgba(255,90,90,.12);color:#FFB3B3;border:1px solid rgba(255,90,90,.35)}
+  .msg.info{background:rgba(245,196,0,.1);color:#FFE38A;border:1px solid rgba(245,196,0,.3)}
+
+  /* firele */
+  .wbtn{display:flex;align-items:center;gap:12px;width:100%;border:1px solid var(--edge);background:var(--card);color:var(--ink);
+    border-radius:14px;padding:15px 14px;margin:8px 0;font-size:17px;font-weight:600;text-align:left}
+  .wbtn:active{transform:scale(.98)}
+  .wbtn.ok{border-color:var(--ok);background:rgba(46,204,113,.15)}
+  .wbtn.bad{border-color:var(--bad);background:rgba(255,90,90,.15)}
+  .sw{display:inline-block;width:56px;height:12px;border-radius:6px;flex:none}
+  .sw.L{background:var(--L)} .sw.N{background:var(--N)} .sw.RET{background:#000;border:1px solid #555} .sw.GRY{background:var(--gry)}
+  .sw.PE{background:repeating-linear-gradient(90deg,var(--PE) 0 9px,var(--PEy) 9px 18px)}
+  .prompt{font-size:19px;font-weight:800;text-align:center;margin:12px 0 6px}
+  .prompt b{color:var(--gold)}
+  .rounds{text-align:center;font-size:12px;letter-spacing:.14em;color:var(--mut);text-transform:uppercase}
+
+  /* tabloul */
+  .trow{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:10px 12px;margin:8px 0}
+  .trow .nm{flex:1;font-size:15px;line-height:1.3}
+  .trow .nm small{display:block;color:var(--mut);font-size:12px}
+  .trow .ch{width:118px;flex:none;border:2px solid var(--gold);background:rgba(245,196,0,.1);color:var(--gold);border-radius:10px;padding:11px 6px;font-weight:900;font-size:15px}
+  .trow.ok .ch{border-color:var(--ok);color:#9BEFBF;background:rgba(46,204,113,.15)}
+  .trow.bad .ch{border-color:var(--bad);color:#FFB3B3;background:rgba(255,90,90,.15)}
+  .trow .why{display:none;flex-basis:100%;font-size:12.5px;color:var(--mut)}
+  .trow.show .why{display:block}
+  .trow{flex-wrap:wrap}
+
+  /* test */
+  .opt{display:block;width:100%;text-align:left;border:1px solid var(--edge);background:var(--card);color:var(--ink);
+    font-size:15.5px;line-height:1.35;padding:13px;border-radius:12px;margin:7px 0}
+  .opt.ok{border-color:var(--ok);background:rgba(46,204,113,.15)} .opt.bad{border-color:var(--bad);background:rgba(255,90,90,.15)}
+  .opt:disabled{color:var(--ink)}
+  .q{font-size:17px;font-weight:700;margin:6px 0 10px;line-height:1.35}
+
+  /* rezultat */
+  #result{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:26px;
+    background:rgba(8,11,20,.86);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  #result.on{display:flex}
+  .rcard{width:100%;max-width:380px;background:var(--card);border:1px solid var(--edge);border-radius:22px;padding:24px 20px;text-align:center}
+  .rcard .stars{font-size:44px;letter-spacing:.1em;color:var(--gold);margin:4px 0}
+  .rcard .stars i{font-style:normal;opacity:.22}
+  .rcard h3{font-size:22px;margin:4px 0}
+  .rcard .sc{font-size:15px;color:var(--mut);margin:4px 0 12px}
+  .rcard .sc b{color:var(--gold);font-size:20px}
+  .rcard p{font-size:14px;color:var(--mut);line-height:1.5;margin:0 0 12px}
+
+  /* SVG scene */
+  .port{cursor:pointer}
+  .port .hit{fill:rgba(0,0,0,0)}
+  .port.sel .ring{stroke:var(--orange);stroke-width:4;animation:pulse .9s ease-in-out infinite}
+  @keyframes pulse{50%{stroke-opacity:.35}}
+  .port.done .ring{stroke:#2E9B5E}
+  .wire.bad{stroke:#FF3B3B!important;stroke-dasharray:0!important;animation:blink .5s linear 4}
+  @keyframes blink{50%{opacity:.25}}
+  .zap{animation:zap .35s linear 2}
+  @keyframes zap{0%,100%{transform:translate(0,0)}25%{transform:translate(3px,-2px)}50%{transform:translate(-3px,2px)}75%{transform:translate(2px,2px)}}
+  .flow{stroke:#FF9F1C;stroke-width:2.2;fill:none;stroke-dasharray:5 11;stroke-linecap:round;animation:flow .6s linear infinite;pointer-events:none}
+  @keyframes flow{to{stroke-dashoffset:-16}}
+  .swbox{cursor:pointer}
+  #scene.solved .port{pointer-events:none}
+  .swbox.live rect{stroke:#E85D04;stroke-width:2.5}
+</style>
+</head>
+<body>
+
+<section class="screen on" id="home">
+  <div class="brand"><h1>ELECTRICIANUL</h1><div class="sub">Jocul instalației</div></div>
+  <div class="total">SCOR TOTAL <b id="total">0</b></div>
+  <div id="levels"></div>
+  <p class="howto">În jocurile cu fire: atingi un capăt de fir, apoi borna la care vrei să‑l legi.<br>Trei stele = fără nicio greșeală.</p>
+  <button class="tiny" id="resetProg">Șterge progresul</button>
+</section>
+
+<section class="screen" id="play">
+  <div class="top">
+    <button id="backBtn">‹</button>
+    <div class="ttl"><b id="pTitle"></b><span id="pSub"></span></div>
+    <div class="pts" id="pPts"></div>
+  </div>
+  <div id="area"></div>
+</section>
+
+<div id="result">
+  <div class="rcard">
+    <div class="stars" id="rStars"></div>
+    <h3 id="rTitle"></h3>
+    <div class="sc">Puncte: <b id="rScore">0</b></div>
+    <p id="rMsg"></p>
+    <div class="row"><button class="btn alt" id="rRetry">Reia</button><button class="btn" id="rNext">Continuă</button></div>
+    <div class="row"><button class="btn alt" id="rHome">Meniu</button></div>
+  </div>
+</div>
+
+<script id="game-js">
+'use strict';
+const $=s=>document.querySelector(s);
+const NS='http://www.w3.org/2000/svg';
+const COL={L:'#8B5A2B',N:'#2F6FE0',PE:'#2E9B5E',PEY:'#F5C400',RET:'#141414',GRY:'#8E98A8',INK:'#1E2430',MUTE:'#5B6470'};
+const NAME={L:'maro',N:'albastru',PE:'galben‑verde',RET:'negru',GRY:'gri'};
+const ROLE={L:'fază',N:'nul',PE:'împământare',RET:'fază comutată'};
+
+/* ================= AUDIO ================= */
+let AC=null,noiseBuf=null;
+function audio(){
+  if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)();
+    const len=AC.sampleRate*0.3; noiseBuf=AC.createBuffer(1,len,AC.sampleRate);
+    const d=noiseBuf.getChannelData(0); for(let i=0;i<len;i++) d[i]=Math.random()*2-1; }catch(e){AC=null;} }
+  if(AC&&AC.state==='suspended') AC.resume();
+}
+function tone(f,dur,type,vol,slide){
+  if(!AC) return; const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();
+  o.type=type||'sine'; o.frequency.setValueAtTime(f,t);
+  if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,slide),t+dur);
+  g.gain.setValueAtTime(vol||.12,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t+dur+.02);
+}
+function noise(dur,vol,freq){
+  if(!AC||!noiseBuf) return; const t=AC.currentTime,s=AC.createBufferSource(); s.buffer=noiseBuf;
+  const f=AC.createBiquadFilter(); f.type='bandpass'; f.frequency.setValueAtTime(freq||2500,t);
+  const g=AC.createGain(); g.gain.setValueAtTime(vol||.2,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  s.connect(f); f.connect(g); g.connect(AC.destination); s.start(t); s.stop(t+dur+.02);
+}
+const sClick=()=>tone(700,.04,'square',.05);
+const sOk=()=>{[523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,.13,'triangle',.12),i*70)); if(navigator.vibrate) navigator.vibrate(25);};
+const sBad=()=>{tone(200,.28,'sawtooth',.14,70); if(navigator.vibrate) navigator.vibrate([40,40,40]);};
+const sZap=()=>{noise(.25,.35,3000); tone(90,.3,'sawtooth',.12,40); if(navigator.vibrate) navigator.vibrate([60,30,90]);};
+const sWin=()=>{[392,494,587,784,988].forEach((f,i)=>setTimeout(()=>tone(f,.16,'triangle',.13),i*80)); if(navigator.vibrate) navigator.vibrate([30,40,60]);};
+const sOn=()=>tone(880,.12,'sine',.1,1200);
+const sOff=()=>tone(500,.1,'sine',.08,300);
+
+/* ================= NIVELURI & PROGRES ================= */
+const LV=[
+ {name:'Firele',desc:'Recunoaște firele după culoare',type:'wires'},
+ {name:'Priza',desc:'Leagă o priză corect',type:'scene',scene:'priza'},
+ {name:'Becul',desc:'Bec + întrerupător',type:'scene',scene:'bec'},
+ {name:'Tabloul',desc:'Siguranța potrivită pe fiecare circuit',type:'tablou'},
+ {name:'Cap‑scară',desc:'Un bec comandat din două locuri',type:'scene',scene:'capscara'},
+ {name:'Testul',desc:'8 întrebări, ca la examen',type:'quiz'}
+];
+let prog={stars:[0,0,0,0,0,0],score:[0,0,0,0,0,0]};
+try{ const p=JSON.parse(localStorage.getItem('electrician_prog')||'null'); if(p&&p.stars&&p.stars.length===6) prog=p; }catch(e){}
+function saveProg(){ try{ localStorage.setItem('electrician_prog',JSON.stringify(prog)); }catch(e){} }
+function unlocked(i){ return i===0||prog.stars[i-1]>0; }
+function starStr(n){ let s=''; for(let i=0;i<3;i++) s+=(i<n?'★':'<i>★</i>'); return s; }
+function renderHome(){
+  $('#total').textContent=prog.score.reduce((a,b)=>a+b,0);
+  $('#levels').innerHTML=LV.map((l,i)=>'<button class="lv'+(unlocked(i)?'':' lock')+'" data-i="'+i+'"><div class="n">'+(i+1)+'</div><div class="t"><b>'+l.name+'</b><span>'+l.desc+'</span></div><div class="s">'+starStr(prog.stars[i])+'</div></button>').join('');
+  document.querySelectorAll('.lv').forEach(b=>b.addEventListener('click',()=>{ audio(); const i=+b.dataset.i; if(!unlocked(i)){ sBad(); return; } sClick(); startLevel(i); }));
+}
+$('#resetProg').addEventListener('click',()=>{ if(confirm('Ștergi tot progresul și scorul?')){ prog={stars:[0,0,0,0,0,0],score:[0,0,0,0,0,0]}; saveProg(); renderHome(); } });
+
+let cur=-1, mistakes=0;
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id)); window.scrollTo(0,0); }
+function startLevel(i){
+  cur=i; mistakes=0; const l=LV[i];
+  $('#pTitle').textContent='Nivelul '+(i+1)+': '+l.name; $('#pSub').textContent=l.desc; $('#pPts').textContent='';
+  $('#area').innerHTML=''; show('play');
+  if(l.type==='wires') startWires();
+  else if(l.type==='scene') startScene(l.scene);
+  else if(l.type==='tablou') startTablou();
+  else startQuiz();
+}
+$('#backBtn').addEventListener('click',()=>{ sClick(); renderHome(); show('home'); });
+function finish(msg){
+  const stars=mistakes===0?3:(mistakes<=2?2:1), score=Math.max(20,100-15*mistakes);
+  if(stars>prog.stars[cur]) prog.stars[cur]=stars;
+  if(score>prog.score[cur]) prog.score[cur]=score;
+  saveProg(); sWin();
+  $('#rStars').innerHTML=starStr(stars); $('#rTitle').textContent=LV[cur].name+': gata';
+  $('#rScore').textContent=score; $('#rMsg').textContent=msg||(mistakes===0?'Fără nicio greșeală.':'Greșeli: '+mistakes+'. Reia nivelul pentru 3 stele.');
+  $('#rNext').textContent=cur<LV.length-1?'Nivelul următor':'Înapoi la meniu'; $('#rHome').style.display=cur<LV.length-1?'':'none';
+  $('#result').classList.add('on');
+}
+$('#rRetry').addEventListener('click',()=>{ $('#result').classList.remove('on'); startLevel(cur); });
+$('#rNext').addEventListener('click',()=>{ $('#result').classList.remove('on'); if(cur<LV.length-1) startLevel(cur+1); else { renderHome(); show('home'); } });
+$('#rHome').addEventListener('click',()=>{ $('#result').classList.remove('on'); renderHome(); show('home'); });
+function setMsg(el,cls,txt){ el.className='msg on '+cls; el.innerHTML=txt; }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+/* ================= NIVEL 1: FIRELE ================= */
+function startWires(){
+  const roles=shuffle(['L','N','PE','RET','L','N','PE','RET']); let r=0;
+  $('#area').innerHTML='<div class="rounds" id="wr"></div><div class="prompt" id="wp"></div><div id="wbtns"></div><div class="msg" id="wmsg"></div>';
+  function round(){
+    if(r>=roles.length){ finish(); return; }
+    $('#wr').textContent='Întrebarea '+(r+1)+' din '+roles.length;
+    $('#wp').innerHTML='Care e firul de <b>'+ROLE[roles[r]].toUpperCase()+'</b>?';
+    $('#wmsg').className='msg';
+    const keys=shuffle(['L','N','PE','RET']);
+    $('#wbtns').innerHTML=keys.map(k=>'<button class="wbtn" data-k="'+k+'"><span class="sw '+k+'"></span>'+NAME[k]+'</button>').join('');
+    let locked=false;
+    document.querySelectorAll('.wbtn').forEach(b=>b.addEventListener('click',()=>{
+      if(locked) return; audio(); const k=b.dataset.k;
+      if(k===roles[r]){ locked=true; b.classList.add('ok'); sOk(); setMsg($('#wmsg'),'ok','Corect: '+NAME[k]+' = '+ROLE[k]+'.'); setTimeout(()=>{r++;round();},700); }
+      else { mistakes++; b.classList.add('bad'); sBad(); setMsg($('#wmsg'),'bad','Nu: '+NAME[k]+' e firul de '+ROLE[k]+'. Mai încearcă.'); $('#pPts').textContent='greșeli: '+mistakes; }
+    }));
+  }
+  round();
+}
+
+/* ================= MOTORUL SCENELOR CU FIRE ================= */
+function svgEl(tag,a){ const e=document.createElementNS(NS,tag); for(const k in a) e.setAttribute(k,a[k]); return e; }
+function T(x,y,s,size,weight,anchor,fill){ const t=svgEl('text',{x:x,y:y,'font-size':size||11,'font-weight':weight||400,'text-anchor':anchor||'middle',fill:fill||COL.INK,'font-family':'system-ui,sans-serif'}); t.textContent=s; return t; }
+function R(x,y,w,h,rx,fill,stroke){ return svgEl('rect',{x:x,y:y,width:w,height:h,rx:rx||8,fill:fill||'#fff',stroke:stroke||COL.INK,'stroke-width':1.5}); }
+function LN(x1,y1,x2,y2,c,w,dash){ const a={x1:x1,y1:y1,x2:x2,y2:y2,stroke:c,'stroke-width':w||3,'stroke-linecap':'round'}; if(dash) a['stroke-dasharray']=dash; return svgEl('line',a); }
+function earthSym(g,x,y){ g.appendChild(LN(x,y-10,x,y-3,COL.INK,2)); g.appendChild(LN(x-7,y-3,x+7,y-3,COL.INK,2)); g.appendChild(LN(x-4.5,y+1,x+4.5,y+1,COL.INK,2)); g.appendChild(LN(x-2,y+5,x+2,y+5,COL.INK,2)); }
+function bulbAt(g,cx,cy){
+  g.appendChild(svgEl('circle',{id:'glow',cx:cx,cy:cy,r:34,fill:'#FFD54A',opacity:0}));
+  g.appendChild(svgEl('circle',{id:'bulb',cx:cx,cy:cy,r:20,fill:'#FFF6D6',stroke:COL.INK,'stroke-width':2}));
+  g.appendChild(LN(cx-14,cy-14,cx+14,cy+14,COL.INK,2)); g.appendChild(LN(cx+14,cy-14,cx-14,cy+14,COL.INK,2));
+}
+function setBulb(on){ $('#bulb').setAttribute('fill',on?'#FFD54A':'#FFF6D6'); $('#glow').setAttribute('opacity',on?.45:0); }
+
+let S=null;
+function startScene(name){
+  const cfg=SCENES[name]();
+  $('#area').innerHTML='<div class="task">'+cfg.task+'</div><div class="panel"><svg id="scene" viewBox="0 0 '+cfg.w+' '+cfg.h+'"></svg></div><div class="msg" id="smsg"></div><div class="row"><button class="btn alt" id="clearBtn">Șterge tot</button><button class="btn" id="checkBtn">Verifică</button></div>';
+  const svg=$('#scene');
+  const gStatic=svgEl('g',{}), gWires=svgEl('g',{}), gFlow=svgEl('g',{}), gPorts=svgEl('g',{});
+  svg.appendChild(gStatic); svg.appendChild(gWires); svg.appendChild(gFlow); svg.appendChild(gPorts);
+  cfg.draw(gStatic);
+  S={cfg:cfg,svg:svg,gWires:gWires,gFlow:gFlow,wires:[],sel:null,solved:false,ports:{}};
+  cfg.ports.forEach(p=>{
+    S.ports[p.id]=p;
+    const g=svgEl('g',{class:'port','data-id':p.id});
+    if(p.kind==='src'){
+      const sx=(p.stub!==undefined)?p.stub:p.x-40;
+      if(sx!==p.x){
+        if(p.color==='PE'){ g.appendChild(LN(sx,p.y,p.x,p.y,COL.PE,5)); g.appendChild(LN(sx,p.y,p.x,p.y,COL.PEY,5,'6 6')); }
+        else g.appendChild(LN(sx,p.y,p.x,p.y,COL[p.color],5));
+      }
+    }
+    g.appendChild(svgEl('circle',{cx:p.x,cy:p.y,r:11,fill:p.kind==='src'?COL[p.color]:'#fff',stroke:COL.INK,'stroke-width':2,class:'ring'}));
+    if(p.kind==='src'&&p.color==='PE') g.appendChild(svgEl('circle',{cx:p.x,cy:p.y,r:5,fill:COL.PEY}));
+    if(p.label){
+      const lx=p.x+(p.ldx||0), ly=p.y+(p.ldy===undefined?-16:p.ldy);
+      if(p.label==='PE') earthSym(g,lx,ly); else g.appendChild(T(lx,ly,p.label,11,700,'middle',p.kind==='src'?COL.MUTE:COL.INK));
+    }
+    g.appendChild(svgEl('circle',{cx:p.x,cy:p.y,r:22,fill:'#000','fill-opacity':'0',class:'hit'}));
+    g.addEventListener('click',()=>portTap(p.id));
+    gPorts.appendChild(g);
+  });
+  $('#clearBtn').addEventListener('click',()=>{ if(S.solved) return; audio(); sClick(); S.wires=[]; S.sel=null; redraw(); $('#smsg').className='msg'; });
+  $('#checkBtn').addEventListener('click',()=>{ audio(); if(S.solved){ finish(); return; } checkScene(); });
+  if(cfg.after) cfg.after(S);
+}
+function portTap(id){
+  if(!S||S.solved) return; audio();
+  const p=S.ports[id];
+  if(p.kind==='src'){ S.sel=(S.sel===id)?null:id; if(S.sel) sClick(); redraw(); return; }
+  if(S.sel){ S.wires=S.wires.filter(w=>w.src!==S.sel&&w.dst!==id); S.wires.push({src:S.sel,dst:id}); S.sel=null; sClick(); redraw(); }
+  else { const n=S.wires.length; S.wires=S.wires.filter(w=>w.dst!==id); if(S.wires.length<n) sClick(); redraw(); }
+}
+function wirePath(a,b,k){
+  if(Math.abs(a.y-b.y)<20&&a.y>290){ const yy=Math.min(a.y,b.y)-42-k*14; return 'M'+a.x+','+a.y+' V'+yy+' H'+b.x+' V'+b.y; }
+  if(Math.abs(a.x-b.x)<30){ const mx=Math.max(a.x,b.x)+34+(k%3)*10; return 'M'+a.x+','+a.y+' H'+mx+' V'+b.y+' H'+b.x; }
+  const mx=a.x+(b.x-a.x)*0.5+((k%3)-1)*12; return 'M'+a.x+','+a.y+' H'+mx+' V'+b.y+' H'+b.x;
+}
+function pathsAll(){
+  let flat=0;
+  return S.wires.map((w,k)=>{
+    const a=S.ports[w.src], b=S.ports[w.dst];
+    const custom=S.cfg.route?S.cfg.route(a,b):null;
+    const same=Math.abs(a.y-b.y)<20&&a.y>290;
+    const d=custom||wirePath(a,b,same?flat++:k);
+    return {w:w,d:d,a:a};
+  });
+}
+function redraw(){
+  const gw=S.gWires; while(gw.firstChild) gw.removeChild(gw.firstChild);
+  pathsAll().forEach(it=>{
+    const c=it.a.color, base={d:it.d,fill:'none','stroke-width':5,'stroke-linejoin':'round','stroke-linecap':'round','data-src':it.w.src,'data-dst':it.w.dst};
+    gw.appendChild(svgEl('path',Object.assign({stroke:COL[c],class:'wire'},base)));
+    if(c==='PE') gw.appendChild(svgEl('path',Object.assign({stroke:COL.PEY,'stroke-dasharray':'7 7',class:'wire'},base)));
+  });
+  document.querySelectorAll('#scene .port').forEach(g=>{
+    const id=g.dataset.id, used=S.wires.some(w=>w.src===id||w.dst===id);
+    g.classList.toggle('sel',S.sel===id); g.classList.toggle('done',used&&S.sel!==id);
+  });
+}
+function flow(pairs){
+  const gf=S.gFlow; while(gf.firstChild) gf.removeChild(gf.firstChild);
+  const all=pathsAll();
+  pairs.forEach(pr=>{
+    const it=all.find(x=>x.w.src===pr[0]&&x.w.dst===pr[1]); if(!it) return;
+    gf.appendChild(svgEl('path',{d:it.d,class:'flow'+(it.a.color==='N'?' rev':'')}));
+  });
+}
+function sameSet(ws,exp){ return ws.length===exp.length&&exp.every(pr=>ws.some(w=>w.src===pr[0]&&w.dst===pr[1])); }
+function checkScene(){
+  const cfg=S.cfg, ws=S.wires, msg=$('#smsg');
+  const okSet=cfg.expect.find(set=>sameSet(ws,set));
+  if(okSet){
+    S.solved=true; S.sel=null; redraw(); S.svg.classList.add('solved');
+    sOk(); setMsg(msg,'ok',cfg.success);
+    $('#checkBtn').textContent='Continuă'; $('#clearBtn').disabled=true;
+    if(cfg.onSolved) cfg.onSolved(S,okSet);
+    return;
+  }
+  mistakes++; $('#pPts').textContent='greșeli: '+mistakes;
+  let text=null, bad=null;
+  for(const w of ws){
+    const isOk=cfg.expect.some(set=>set.some(pr=>pr[0]===w.src&&pr[1]===w.dst));
+    if(!isOk){ bad=w; text=cfg.explain(w.src,w.dst); break; }
+  }
+  if(!bad){
+    const missing=cfg.expect[0].filter(pr=>!ws.some(w=>w.src===pr[0]&&w.dst===pr[1])).length;
+    text='Legăturile de până acum sunt bune, dar mai lipsesc '+missing+'. Fiecare capăt de fir trebuie să ajungă la o bornă.';
+    sBad();
+  } else {
+    document.querySelectorAll('#scene .wire').forEach(w=>{ if(w.dataset.src===bad.src&&w.dataset.dst===bad.dst) w.classList.add('bad'); });
+    S.svg.classList.remove('zap'); void S.svg.offsetWidth; S.svg.classList.add('zap'); sZap();
+  }
+  setMsg(msg,'bad',text);
+}
+
+const PE_RULE='Galben‑verde e NUMAI pentru împământare (borna cu semnul de pământ). Pus pe L sau N, curentul ajunge în carcasele metalice ale aparatelor.';
+const PE_TARGET='La borna de împământare merge doar galben‑verde. Orice alt fir acolo trimite curent în carcasele aparatelor.';
+const SCENES={
+ priza:()=>({
+  w:360,h:300,
+  task:'Leagă cele 3 fire de la tablou la bornele prizei. Atingi firul, apoi borna.',
+  draw:g=>{
+    g.appendChild(T(14,44,'DE LA TABLOU (siguranța C16)',10,700,'start',COL.MUTE));
+    g.appendChild(T(14,58,'3 fire FY 2,5 mm²',10,400,'start',COL.MUTE));
+    g.appendChild(T(265,62,'PRIZA (vedere din spate)',11,700,'middle'));
+    g.appendChild(R(190,72,150,190,14));
+    g.appendChild(svgEl('circle',{cx:265,cy:172,r:38,fill:'none',stroke:'#D8DCE3','stroke-width':1.5}));
+  },
+  ports:[
+    {id:'dL',x:44,y:110,kind:'src',color:'L',label:'maro',stub:0},
+    {id:'dN',x:44,y:160,kind:'src',color:'N',label:'albastru',stub:0},
+    {id:'dPE',x:44,y:210,kind:'src',color:'PE',label:'galben‑verde',stub:0},
+    {id:'pN',x:222,y:150,kind:'dst',label:'N'},
+    {id:'pL',x:308,y:150,kind:'dst',label:'L'},
+    {id:'pPE',x:265,y:232,kind:'dst',label:'PE',ldy:-18}
+  ],
+  expect:[[['dL','pL'],['dN','pN'],['dPE','pPE']]],
+  explain:(s,d)=>{ if(s==='dPE') return PE_RULE; if(d==='pPE') return PE_TARGET;
+    return 'Fază și nul inversate. Maro merge la borna L, albastru la borna N.'; },
+  success:'Priza e legată corect: maro la L, albastru la N, galben‑verde la împământare. Următoarea priză se leagă din aceleași borne, mai departe.'
+ }),
+ bec:()=>({
+  w:360,h:420,
+  task:'Din doză vin 3 fire. Leagă întrerupătorul și becul astfel încât <b>întrerupătorul să comande becul</b>.',
+  draw:g=>{
+    g.appendChild(T(14,44,'DIN DOZĂ (siguranța C10)',10,700,'start',COL.MUTE));
+    g.appendChild(T(275,50,'BEC',12,700)); g.appendChild(R(210,60,130,180,14)); bulbAt(g,300,150);
+    const sw=svgEl('g',{id:'swA',class:'swbox'}); sw.appendChild(R(30,300,140,80,14)); sw.appendChild(T(100,368,'ÎNTRERUPĂTOR',11,700));
+    sw.appendChild(svgEl('line',{id:'levA',x1:65,y1:330,x2:118,y2:313,stroke:COL.INK,'stroke-width':3,'stroke-linecap':'round'}));
+    g.appendChild(sw);
+  },
+  ports:[
+    {id:'dL',x:44,y:90,kind:'src',color:'L',label:'maro',stub:0},
+    {id:'dN',x:44,y:140,kind:'src',color:'N',label:'albastru',stub:0},
+    {id:'dPE',x:44,y:190,kind:'src',color:'PE',label:'galben‑verde',stub:0},
+    {id:'swIn',x:65,y:330,kind:'dst',label:'L',ldy:24},
+    {id:'swOut',x:130,y:330,kind:'src',color:'RET',label:'1',stub:130,ldy:24},
+    {id:'lL',x:240,y:100,kind:'dst',label:'L',ldx:22,ldy:4},
+    {id:'lN',x:240,y:150,kind:'dst',label:'N',ldx:22,ldy:4},
+    {id:'lPE',x:240,y:200,kind:'dst',label:'PE',ldx:24,ldy:4}
+  ],
+  expect:[[['dL','swIn'],['swOut','lL'],['dN','lN'],['dPE','lPE']]],
+  explain:(s,d)=>{
+    if(s==='dPE') return PE_RULE; if(d==='lPE') return PE_TARGET;
+    if(s==='dL'&&d==='lL') return 'Ai dus faza direct la bec: ar sta aprins tot timpul. Faza intră întâi în întrerupător (borna L), iar la bec ajunge din borna 1, pe firul negru.';
+    if(s==='dN'&&d==='swIn') return 'Nulul NU se întrerupe niciodată. Prin întrerupător trece doar faza; nulul merge direct la bec.';
+    if(s==='swOut'&&d==='lN') return 'Firul negru (faza comutată) merge la borna L a becului, nu la N.';
+    if(s==='dL'&&d==='lN') return 'Faza nu se pune la N. Faza merge în întrerupător, iar la bec ajunge doar prin întrerupător.';
+    if(s==='dN'&&d==='lL') return 'Albastrul e nulul: merge la borna N a becului.';
+    if(s==='swOut'&&d==='swIn') return 'Ai legat întrerupătorul la el însuși. Borna 1 pleacă spre bec.';
+    return 'Legătura nu e corectă.';
+  },
+  success:'Corect. Faza trece prin întrerupător, nulul și PE merg direct la bec. Apasă pe întrerupător ca să vezi curentul.',
+  after:S=>{ let on=false; $('#swA').addEventListener('click',()=>{ if(!S.solved) return; audio(); on=!on; if(on) sOn(); else sOff();
+    const lv=$('#levA'); lv.setAttribute('x2',on?130:118); lv.setAttribute('y2',on?330:313); setBulb(on);
+    flow(on?[['dL','swIn'],['swOut','lL'],['dN','lN']]:[]); }); },
+  onSolved:S=>{ $('#swA').classList.add('live'); }
+ }),
+ capscara:()=>({
+  w:360,h:440,
+  task:'Același bec, aprins din două locuri. Leagă doza, cele două comutatoare (borne COM, 1, 2) și becul.',
+  draw:g=>{
+    g.appendChild(T(14,44,'DIN DOZĂ (C10)',10,700,'start',COL.MUTE));
+    g.appendChild(T(275,42,'BEC',12,700)); g.appendChild(R(210,52,130,176,14)); bulbAt(g,300,140);
+    const A=svgEl('g',{id:'swA',class:'swbox'}); A.appendChild(R(14,300,156,84,14)); A.appendChild(T(92,374,'COMUTATOR A',10,700));
+    A.appendChild(svgEl('line',{id:'levA',x1:45,y1:330,x2:97,y2:318,stroke:COL.INK,'stroke-width':3,'stroke-linecap':'round'})); g.appendChild(A);
+    const B=svgEl('g',{id:'swB',class:'swbox'}); B.appendChild(R(196,300,150,84,14)); B.appendChild(T(271,374,'COMUTATOR B',10,700));
+    B.appendChild(svgEl('line',{id:'levB',x1:318,y1:330,x2:230,y2:318,stroke:COL.INK,'stroke-width':3,'stroke-linecap':'round'})); g.appendChild(B);
+  },
+  ports:[
+    {id:'dL',x:44,y:80,kind:'src',color:'L',label:'maro',stub:0},
+    {id:'dN',x:44,y:130,kind:'src',color:'N',label:'albastru',stub:0},
+    {id:'dPE',x:44,y:180,kind:'src',color:'PE',label:'galben‑verde',stub:0},
+    {id:'aCom',x:45,y:330,kind:'dst',label:'COM',ldy:24},
+    {id:'a1',x:105,y:330,kind:'src',color:'GRY',label:'1',stub:105,ldy:24},
+    {id:'a2',x:145,y:330,kind:'src',color:'GRY',label:'2',stub:145,ldy:24},
+    {id:'b1',x:222,y:330,kind:'dst',label:'1',ldy:24},
+    {id:'b2',x:262,y:330,kind:'dst',label:'2',ldy:24},
+    {id:'bCom',x:318,y:330,kind:'src',color:'RET',label:'COM',stub:318,ldy:-16},
+    {id:'lL',x:240,y:90,kind:'dst',label:'L',ldx:22,ldy:4},
+    {id:'lN',x:240,y:140,kind:'dst',label:'N',ldx:22,ldy:4},
+    {id:'lPE',x:240,y:190,kind:'dst',label:'PE',ldx:24,ldy:4}
+  ],
+  route:(a,b)=>{ if(a.id==='bCom'&&b.id==='lL') return 'M318,330 V402 H183 V90 H240'; if(a.id==='bCom') return 'M318,330 V402 H183 V'+b.y+' H'+b.x; return null; },
+  expect:[ [['dL','aCom'],['a1','b1'],['a2','b2'],['bCom','lL'],['dN','lN'],['dPE','lPE']],
+           [['dL','aCom'],['a1','b2'],['a2','b1'],['bCom','lL'],['dN','lN'],['dPE','lPE']] ],
+  explain:(s,d)=>{
+    if(s==='dPE') return PE_RULE; if(d==='lPE') return PE_TARGET;
+    if(s==='dL'&&d==='lL') return 'Faza dusă direct la bec ține becul aprins mereu. Faza intră în COM‑ul comutatorului A.';
+    if(s==='dL'&&(d==='b1'||d==='b2')) return 'Faza intră în borna COM a comutatorului A, nu în bornele 1 sau 2.';
+    if(s==='dN'&&d!=='lN') return 'Nulul nu trece prin comutatoare. Merge direct la borna N a becului.';
+    if((s==='a1'||s==='a2')&&(d==='lL'||d==='lN')) return 'Bornele 1 și 2 ale lui A se leagă la bornele 1 și 2 ale lui B, nu la bec.';
+    if((s==='a1'||s==='a2')&&d==='aCom') return 'Ai legat comutatorul A la el însuși.';
+    if(s==='bCom'&&d!=='lL') return 'Din COM‑ul lui B iese faza comutată (negru) spre borna L a becului.';
+    if(s==='dL'&&d==='lN') return 'Fază și nul inversate la bec: negrul la L, albastrul la N.';
+    return 'Legătura nu e corectă.';
+  },
+  success:'Corect. Apasă pe A sau pe B: oricare dintre ele aprinde sau stinge becul.',
+  after:S=>{
+    let a=0,b=1,crossed=false;
+    function upd(sound){
+      const on=crossed?(a!==b):(a===b);
+      $('#levA').setAttribute('x2',a?137:97); $('#levB').setAttribute('x2',b?270:230); setBulb(on);
+      if(sound){ if(on) sOn(); else sOff(); }
+      const trav=a?'a2':'a1', tw=S.wires.find(w=>w.src===trav);
+      flow(on?[['dL','aCom'],[trav,tw?tw.dst:'b1'],['bCom','lL'],['dN','lN']]:[]);
+    }
+    S.capInit=cr=>{ crossed=cr; a=0; b=cr?0:1; upd(false); };
+    $('#swA').addEventListener('click',()=>{ if(!S.solved) return; audio(); a=1-a; upd(true); });
+    $('#swB').addEventListener('click',()=>{ if(!S.solved) return; audio(); b=1-b; upd(true); });
+  },
+  onSolved:(S,set)=>{ const cr=set.some(pr=>pr[0]==='a1'&&pr[1]==='b2'); S.capInit(cr); $('#swA').classList.add('live'); $('#swB').classList.add('live'); }
+ })
+};
+
+/* ================= NIVEL 4: TABLOUL ================= */
+function startTablou(){
+  const rows=[
+   {n:'Protecție la electrocutare',s:'primul aparat după alimentare',o:['Diferențial 30 mA','Siguranță C40','Nimic, e opțional'],ok:0,why:'Diferențialul de 30 mA taie curentul când „scapă” spre pământ – singura protecție pentru oameni. Siguranțele protejează doar firele.'},
+   {n:'Iluminat (becuri)',s:'fir 1,5 mm²',o:['C10','C16','C25'],ok:0,why:'Firul de 1,5 mm² se protejează cu C10.'},
+   {n:'Prize living',s:'fir 2,5 mm², cel mult 8 prize',o:['C10','C16','C25'],ok:1,why:'Firul de 2,5 mm² se protejează cu C16.'},
+   {n:'Prize bucătărie',s:'fir 2,5 mm²',o:['C10','C16','C25'],ok:1,why:'2,5 mm² → C16.'},
+   {n:'Mașină de spălat',s:'circuit propriu, 2,5 mm²',o:['C10','C16','C25'],ok:1,why:'2,5 mm² → C16, pe circuit separat.'},
+   {n:'Boiler',s:'circuit propriu, 2,5 mm²',o:['C10','C16','C25'],ok:1,why:'2,5 mm² → C16, pe circuit separat.'},
+   {n:'Cuptor / plită electrică',s:'fir 4–6 mm²',o:['C10','C16','C25'],ok:2,why:'4–6 mm² → C25 (plită mare: C32 pe 6 mm²).'}
+  ];
+  const sel=rows.map(()=>-1); let checked=false;
+  $('#area').innerHTML='<div class="task">Atingi căsuța din dreapta până apare valoarea potrivită pentru fiecare rând, apoi <b>Verifică</b>.</div><div id="trows"></div><div class="msg" id="tmsg"></div><div class="row"><button class="btn" id="tcheck">Verifică</button></div>';
+  $('#trows').innerHTML=rows.map((r,i)=>'<div class="trow" data-i="'+i+'"><div class="nm">'+r.n+(r.s?'<small>'+r.s+'</small>':'')+'</div><button class="ch">?</button><div class="why">'+r.why+'</div></div>').join('');
+  document.querySelectorAll('.trow .ch').forEach((b,i)=>b.addEventListener('click',()=>{ if(checked) return; audio(); sClick(); sel[i]=(sel[i]+1)%rows[i].o.length; b.textContent=rows[i].o[sel[i]]; }));
+  $('#tcheck').addEventListener('click',()=>{
+    audio();
+    if(checked){ finish(); return; }
+    if(sel.some(v=>v<0)){ setMsg($('#tmsg'),'info','Alege o valoare la fiecare rând.'); sBad(); return; }
+    checked=true; let wrong=0;
+    document.querySelectorAll('.trow').forEach((el,i)=>{ const ok=sel[i]===rows[i].ok; el.classList.add(ok?'ok':'bad'); el.classList.add('show'); if(!ok){ wrong++; el.querySelector('.ch').textContent=rows[i].o[rows[i].ok]; } });
+    mistakes=wrong; $('#pPts').textContent='greșeli: '+mistakes;
+    if(wrong===0){ sOk(); setMsg($('#tmsg'),'ok','Tabloul e corect: diferențialul primul, apoi câte o siguranță potrivită pe fiecare circuit.'); }
+    else { sBad(); setMsg($('#tmsg'),'bad',wrong+(wrong===1?' rând greșit':' rânduri greșite')+'. Valorile corecte sunt afișate acum, cu explicația sub fiecare.'); }
+    $('#tcheck').textContent='Continuă';
+  });
+}
+
+/* ================= NIVEL 6: TESTUL ================= */
+const QUIZ=[
+ {q:'Ce culoare are firul de fază?',a:['albastru','maro','galben‑verde','negru'],c:1,why:'Maro = faza, firul sub tensiune. Albastru e nulul, galben‑verde e împământarea.'},
+ {q:'Prin întrerupător trece:',a:['nulul','toate cele trei fire','faza','împământarea'],c:2,why:'Se întrerupe numai faza. Nulul și PE merg direct la bec.'},
+ {q:'Câte prize pui cel mult pe un circuit de 2,5 mm² cu siguranță C16?',a:['4','8','12','oricâte'],c:1,why:'Cel mult 8 prize pe circuit. Electrocasnicele mari au circuitul lor separat.'},
+ {q:'La ce folosește diferențialul de 30 mA?',a:['protejează firele de supraîncălzire','protejează oamenii de electrocutare','face becurile să țină mai mult','ține loc de priză de pământ'],c:1,why:'Sesizează curentul care „scapă” spre pământ și taie în câteva miimi de secundă. Firele le protejează siguranțele.'},
+ {q:'Firul galben‑verde se leagă la:',a:['borna de împământare a fiecărei prize și a fiecărui corp de iluminat','nul, dacă nu ai fir albastru','fază, dacă nu ai fir maro','nicăieri, e opțional'],c:0,why:'Galben‑verde e numai pentru împământare și merge la fiecare priză și corp de iluminat.'},
+ {q:'Unde se fac legăturile între fire?',a:['în copex, răsucite','în spatele prizei, cu bandă izolatoare','oriunde, dacă e izolat bine','în doze, cu cleme Wago'],c:3,why:'Numai în doze, cu cleme. Dozele rămân accesibile, nu se tencuiesc peste ele.'},
+ {q:'Ce grosime are firul pentru prize?',a:['1,5 mm²','2,5 mm²','0,75 mm²','6 mm²'],c:1,why:'Prize: 2,5 mm² cu C16. Becuri: 1,5 mm² cu C10.'},
+ {q:'Înainte să atingi un fir:',a:['opresc întrerupătorul din cameră','opresc siguranța generală din contor și verific cu testerul','lucrez repede','port mănuși de cauciuc'],c:1,why:'Numai cu siguranța generală oprită și după ce testerul arată că nu e tensiune.'}
+];
+function startQuiz(){
+  let qi=0;
+  function render(){
+    if(qi>=QUIZ.length){ finish(); return; }
+    const it=QUIZ[qi];
+    $('#area').innerHTML='<div class="rounds">Întrebarea '+(qi+1)+' din '+QUIZ.length+'</div><div class="q">'+it.q+'</div>'+it.a.map((t,i)=>'<button class="opt" data-i="'+i+'">'+t+'</button>').join('')+'<div class="msg" id="qmsg"></div><div class="row"><button class="btn" id="qnext" disabled>'+(qi<QUIZ.length-1?'Următoarea':'Rezultat')+'</button></div>';
+    let done=false;
+    document.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',()=>{
+      if(done) return; audio(); done=true; const i=+b.dataset.i;
+      document.querySelectorAll('.opt').forEach(o=>o.disabled=true);
+      if(i===it.c){ b.classList.add('ok'); sOk(); setMsg($('#qmsg'),'ok','Corect. '+it.why); }
+      else { mistakes++; $('#pPts').textContent='greșeli: '+mistakes; b.classList.add('bad'); document.querySelectorAll('.opt')[it.c].classList.add('ok'); sBad(); setMsg($('#qmsg'),'bad','Nu. '+it.why); }
+      $('#qnext').disabled=false;
+    }));
+    $('#qnext').addEventListener('click',()=>{ audio(); sClick(); qi++; render(); });
+  }
+  render();
+}
+
+/* ================= PORNIRE ================= */
+window.gameBack=function(){
+  if($('#result').classList.contains('on')){ $('#result').classList.remove('on'); renderHome(); show('home'); return 'ok'; }
+  if($('#play').classList.contains('on')){ renderHome(); show('home'); return 'ok'; }
+  return 'exit';
+};
+document.addEventListener('touchstart',audio,{once:true});
+document.addEventListener('contextmenu',e=>e.preventDefault());
+renderHome();
+</script>
+</body>
+</html>
