@@ -12,6 +12,18 @@ jobs:
       - name: Preia codul
         uses: actions/checkout@v4
 
+      - name: Așază fișierele în structura Android
+        run: |
+          mkdir -p app/src/main/java/com/electrician/joc app/src/main/assets app/src/main/res/values app/src/main/res/drawable app/src/main/res/mipmap-anydpi-v26
+          cp -f app-build.gradle app/build.gradle
+          cp -f AndroidManifest.xml app/src/main/
+          cp -f MainActivity.java app/src/main/java/com/electrician/joc/
+          cp -f index.html app/src/main/assets/
+          cp -f strings.xml colors.xml styles.xml app/src/main/res/values/
+          cp -f ic_launcher.xml app/src/main/res/mipmap-anydpi-v26/
+          cp -f ic_launcher_foreground.xml app/src/main/res/drawable/
+          ls -R app
+
       - name: Instalează Java 17
         uses: actions/setup-java@v4
         with:
