@@ -2,47 +2,60 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
+
     steps:
-      - name: Preia codul
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Așază fișierele în structura Android
-        run: |
-          mkdir -p app/src/main/java/com/electrician/joc app/src/main/assets app/src/main/res/values app/src/main/res/drawable app/src/main/res/mipmap-anydpi-v26
-          cp -f app-build.gradle app/build.gradle
-          cp -f AndroidManifest.xml app/src/main/
-          cp -f MainActivity.java app/src/main/java/com/electrician/joc/
-          cp -f index.html app/src/main/assets/
-          cp -f strings.xml colors.xml styles.xml app/src/main/res/values/
-          cp -f ic_launcher.xml app/src/main/res/mipmap-anydpi-v26/
-          cp -f ic_launcher_foreground.xml app/src/main/res/drawable/
-          ls -R app
-
-      - name: Instalează Java 17
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Pregătește Android SDK
+      - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Instalează Gradle 8.7
+      - name: Install Gradle 8.7
         run: |
-          curl -sL https://services.gradle.org/distributions/gradle-8.7-bin.zip -o /tmp/gradle.zip
-          unzip -q /tmp/gradle.zip -d $HOME/gradle
-          echo "$HOME/gradle/gradle-8.7/bin" >> $GITHUB_PATH
+          curl -L \
+            https://services.gradle.org/distributions/gradle-8.7-bin.zip \
+            -o /tmp/gradle.zip
 
-      - name: Construiește APK-ul
-        run: gradle assembleDebug --no-daemon
+          unzip -q /tmp/gradle.zip -d "$HOME/gradle"
 
-      - name: Încarcă APK-ul (artefact)
+          echo "$HOME/gradle/gradle-8.7/bin" >> "$GITHUB_PATH"
+
+      - name: Check project files
+        run: |
+          echo "=== Project ==="
+          ls -la
+
+          echo "=== build.gradle ==="
+          cat build.gradle
+
+          echo "=== settings.gradle ==="
+          cat settings.gradle
+
+          echo "=== app/build.gradle ==="
+          cat app/build.gradle
+
+      - name: Build APK
+        run: |
+          gradle assembleDebug \
+            --no-daemon \
+            --stacktrace
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Electricianul-APK
