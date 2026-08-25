@@ -190,16 +190,33 @@ const sOn=()=>tone(880,.12,'sine',.1,1200);
 const sOff=()=>tone(500,.1,'sine',.08,300);
 
 /* ================= NIVELURI & PROGRES ================= */
-const LV=[
+const BASE_LV=[
  {name:'Firele',desc:'Recunoaște firele după culoare',type:'wires'},
  {name:'Priza',desc:'Leagă o priză corect',type:'scene',scene:'priza'},
  {name:'Becul',desc:'Bec + întrerupător',type:'scene',scene:'bec'},
  {name:'Tabloul',desc:'Siguranța potrivită pe fiecare circuit',type:'tablou'},
- {name:'Cap‑scară',desc:'Un bec comandat din două locuri',type:'scene',scene:'capscara'},
+ {name:'Cap-scară',desc:'Un bec comandat din două locuri',type:'scene',scene:'capscara'},
  {name:'Testul',desc:'8 întrebări, ca la examen',type:'quiz'}
 ];
-let prog={stars:[0,0,0,0,0,0],score:[0,0,0,0,0,0]};
-try{ const p=JSON.parse(localStorage.getItem('electrician_prog')||'null'); if(p&&p.stars&&p.stars.length===6) prog=p; }catch(e){}
+const TOPICS=[
+ ['Fundamente','Identifică faza, nulul și protecția'],['Circuite','Construiește circuitul corect'],['Iluminat','Controlează becuri și întrerupătoare'],
+ ['Prize','Conectează și verifică prize'],['Comutatoare','Rezolvă circuite cap-scară și cruce'],['Tablouri','Alege protecții și circuite'],
+ ['Măsurători','Folosește multimetrul virtual'],['Defecțiuni','Găsește și repară defecte'],['Ohm','Calculează U, I, R și P'],['Consumatori','Lucrează cu motoare și relee'],
+ ['Trifazat','Învață L1, L2, L3 și protecțiile'],['Misiuni','Rezolvă instalații complete']
+];
+const ACTIONS=[
+ 'Identifică conductorul cerut','Închide întrerupătorul potrivit','Conectează bornele în ordinea corectă',
+ 'Alege siguranța potrivită','Măsoară tensiunea','Găsește firul întrerupt','Repară scurtcircuitul',
+ 'Calculează puterea','Selectează protecția','Pornește instalația','Testează continuitatea','Diagnostică tabloul'
+];
+const LV=BASE_LV.slice();
+for(let i=6;i<100;i++){
+ const t=TOPICS[Math.floor((i-6)/8)%TOPICS.length], a=ACTIONS[(i-6)%ACTIONS.length];
+ LV.push({name:t[0]+' '+(i+1),desc:a+' • misiune practică',type:'action',topic:t[0],action:a,difficulty:Math.min(5,1+Math.floor((i-6)/20))});
+}
+
+let prog={stars:Array(LV.length).fill(0),score:Array(LV.length).fill(0)};
+try{ const p=JSON.parse(localStorage.getItem('electrician_prog')||'null'); if(p&&Array.isArray(p.stars)&&p.stars.length===LV.length) prog=p; }catch(e){}
 function saveProg(){ try{ localStorage.setItem('electrician_prog',JSON.stringify(prog)); }catch(e){} }
 function unlocked(i){ return i===0||prog.stars[i-1]>0; }
 function starStr(n){ let s=''; for(let i=0;i<3;i++) s+=(i<n?'★':'<i>★</i>'); return s; }
@@ -208,7 +225,7 @@ function renderHome(){
   $('#levels').innerHTML=LV.map((l,i)=>'<button class="lv'+(unlocked(i)?'':' lock')+'" data-i="'+i+'"><div class="n">'+(i+1)+'</div><div class="t"><b>'+l.name+'</b><span>'+l.desc+'</span></div><div class="s">'+starStr(prog.stars[i])+'</div></button>').join('');
   document.querySelectorAll('.lv').forEach(b=>b.addEventListener('click',()=>{ audio(); const i=+b.dataset.i; if(!unlocked(i)){ sBad(); return; } sClick(); startLevel(i); }));
 }
-$('#resetProg').addEventListener('click',()=>{ if(confirm('Ștergi tot progresul și scorul?')){ prog={stars:[0,0,0,0,0,0],score:[0,0,0,0,0,0]}; saveProg(); renderHome(); } });
+$('#resetProg').addEventListener('click',()=>{ if(confirm('Ștergi tot progresul și scorul?')){ prog={stars:Array(LV.length).fill(0),score:Array(LV.length).fill(0)}; saveProg(); renderHome(); } });
 
 let cur=-1, mistakes=0;
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id)); window.scrollTo(0,0); }
@@ -219,7 +236,8 @@ function startLevel(i){
   if(l.type==='wires') startWires();
   else if(l.type==='scene') startScene(l.scene);
   else if(l.type==='tablou') startTablou();
-  else startQuiz();
+  else if(l.type==='quiz') startQuiz();
+  else startAction(l);
 }
 $('#backBtn').addEventListener('click',()=>{ sClick(); renderHome(); show('home'); });
 function finish(msg){
@@ -257,6 +275,57 @@ function startWires(){
     }));
   }
   round();
+}
+
+/* ================= MISIUNI INTERACTIVE 7-100 ================= */
+function startAction(l){
+  const d=l.difficulty||1;
+  const pool=[
+    {title:'Tablou sub tensiune',kind:'breaker',q:'Alege protecția corectă pentru circuitul indicat.',opts:['C6','C10','C16','C25'],correct:2,why:'Pentru această misiune, circuitul este modelat pentru C16.'},
+    {title:'Măsurătoare',kind:'meter',q:'Atinge multimetrul, alege modul AC și măsoară punctele cerute.',opts:['0 V','12 V','230 V','400 V'],correct:2,why:'În această simulare punctul măsurat este alimentat la 230 V AC.'},
+    {title:'Defect ascuns',kind:'fault',q:'Un bec nu se aprinde. Găsește cauza înainte să repari.',opts:['Nul întrerupt','PE inversat cu L','Bec ars','Toate cele de mai sus'],correct:3,why:'Misiunea are mai multe simptome; verificarea pas cu pas elimină cauza.'},
+    {title:'Putere electrică',kind:'calc',q:'Un consumator are 230 V și 5 A. Ce putere are?',opts:['46 W','235 W','1 150 W','11 500 W'],correct:2,why:'P = U × I = 230 × 5 = 1 150 W.'},
+    {title:'Continuitate',kind:'continuity',q:'Găsește perechea de borne care are continuitate.',opts:['A → B','A → C','B → C','Niciuna'],correct:1,why:'În această schemă conductorul de test este A → C.'}
+  ];
+  const m=pool[(cur-6)%pool.length];
+  let selected=-1, phase=0, timer=0, solved=false;
+  $('#area').innerHTML=`<div class="task"><b>${l.topic}</b><br>${l.action}. ${m.q}</div>
+  <div class="panel"><svg id="actionSvg" viewBox="0 0 360 270"></svg></div>
+  <div class="rounds">Misiune ${cur+1} / 100 • dificultate ${d}/5</div>
+  <div id="actionControls"></div><div class="msg" id="amsg"></div>
+  <div class="row"><button class="btn alt" id="hintBtn">Indiciu</button><button class="btn" id="actionCheck" disabled>Verifică</button></div>`;
+  const svg=$('#actionSvg');
+  const g=svgEl('g',{}); svg.appendChild(g);
+  g.appendChild(R(8,8,344,254,18,'#F5F7FA','#CCD2DC'));
+  g.appendChild(T(180,34,m.title,17,900,'middle',COL.INK));
+  g.appendChild(T(180,58,'MISIUNE PRACTICĂ',10,800,'middle',COL.MUTE));
+  // animate a small installation: source -> switch -> load
+  g.appendChild(R(34,82,76,54,12,'#FFFFFF','#222')); g.appendChild(T(72,105,'TABLOU',11,800)); g.appendChild(T(72,122,'230 V',10,500));
+  g.appendChild(R(142,82,76,54,12,'#FFFFFF','#222')); g.appendChild(T(180,105,'COMANDĂ',10,800));
+  g.appendChild(R(250,82,76,54,12,'#FFFFFF','#222')); g.appendChild(T(288,105,'SARCINĂ',10,800));
+  g.appendChild(LN(110,109,142,109,COL.L,5)); g.appendChild(LN(218,109,250,109,COL.RET,5));
+  const led=svgEl('circle',{id:'aled',cx:288,cy:170,r:22,fill:'#FFF6D6',stroke:COL.INK,'stroke-width':2}); g.appendChild(led);
+  g.appendChild(T(288,208,'atinge elementele',11,700,'middle',COL.MUTE));
+  const controls=$('#actionControls');
+  if(m.kind==='meter'){
+    controls.innerHTML='<div class="row"><button class="btn alt" data-mode="OFF">OFF</button><button class="btn alt" data-mode="AC">AC V</button><button class="btn alt" data-mode="DC">DC V</button></div><div class="prompt" id="meterVal">--</div>';
+    controls.querySelectorAll('button').forEach(b=>b.onclick=()=>{audio(); phase=b.dataset.mode==='AC'?1:2; $('#actionCheck').disabled=phase!==1; $('#meterVal').textContent=phase===1?'230 V':'Alege AC V'; sClick();});
+  } else {
+    controls.innerHTML='<div class="prompt">Alege acțiunea corectă</div>'+m.opts.map((x,i)=>`<button class="opt" data-i="${i}">${x}</button>`).join('');
+    controls.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(solved)return; audio(); selected=+b.dataset.i; controls.querySelectorAll('.opt').forEach(x=>x.classList.remove('ok','bad')); b.classList.add('ok'); $('#actionCheck').disabled=false; sClick();});
+  }
+  $('#hintBtn').onclick=()=>{audio(); setMsg($('#amsg'),'info','Indiciu: '+m.why);};
+  $('#actionCheck').onclick=()=>{
+    if(solved){finish();return;}
+    let ok=(m.kind==='meter'?phase===1:selected===m.correct);
+    if(ok){solved=true; sOk(); $('#actionCheck').textContent='Continuă'; setMsg($('#amsg'),'ok','Corect! '+m.why); led.setAttribute('fill','#FFD54A'); led.setAttribute('filter','drop-shadow(0 0 8px #F5C400)'); $('#actionCheck').disabled=false;}
+    else{mistakes++; $('#pPts').textContent='greșeli: '+mistakes; sBad(); setMsg($('#amsg'),'bad','Nu este corect. Mai verifică instalația și încearcă din nou.');}
+  };
+  // interactive SVG touch targets
+  [0,1,2].forEach(i=>{
+    const x=72+i*108, c=svgEl('circle',{cx:x,cy:170,r:18,fill:'transparent',stroke:'transparent'});
+    c.style.cursor='pointer'; c.addEventListener('click',()=>{audio(); const msg=['Tablou: verifică protecția.','Comandă: verifică poziția întrerupătorului.','Sarcină: verifică alimentarea și continuitatea.'][i]; setMsg($('#amsg'),'info',msg); if(i===1){led.setAttribute('fill','#FFD54A'); setTimeout(()=>{if(!solved)led.setAttribute('fill','#FFF6D6')},350);} }); svg.appendChild(c);
+  });
 }
 
 /* ================= MOTORUL SCENELOR CU FIRE ================= */
