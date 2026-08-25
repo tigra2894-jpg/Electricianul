@@ -279,53 +279,194 @@ function startWires(){
 
 /* ================= MISIUNI INTERACTIVE 7-100 ================= */
 function startAction(l){
-  const d=l.difficulty||1;
-  const pool=[
-    {title:'Tablou sub tensiune',kind:'breaker',q:'Alege protecția corectă pentru circuitul indicat.',opts:['C6','C10','C16','C25'],correct:2,why:'Pentru această misiune, circuitul este modelat pentru C16.'},
-    {title:'Măsurătoare',kind:'meter',q:'Atinge multimetrul, alege modul AC și măsoară punctele cerute.',opts:['0 V','12 V','230 V','400 V'],correct:2,why:'În această simulare punctul măsurat este alimentat la 230 V AC.'},
-    {title:'Defect ascuns',kind:'fault',q:'Un bec nu se aprinde. Găsește cauza înainte să repari.',opts:['Nul întrerupt','PE inversat cu L','Bec ars','Toate cele de mai sus'],correct:3,why:'Misiunea are mai multe simptome; verificarea pas cu pas elimină cauza.'},
-    {title:'Putere electrică',kind:'calc',q:'Un consumator are 230 V și 5 A. Ce putere are?',opts:['46 W','235 W','1 150 W','11 500 W'],correct:2,why:'P = U × I = 230 × 5 = 1 150 W.'},
-    {title:'Continuitate',kind:'continuity',q:'Găsește perechea de borne care are continuitate.',opts:['A → B','A → C','B → C','Niciuna'],correct:1,why:'În această schemă conductorul de test este A → C.'}
-  ];
-  const m=pool[(cur-6)%pool.length];
-  let selected=-1, phase=0, timer=0, solved=false;
-  $('#area').innerHTML=`<div class="task"><b>${l.topic}</b><br>${l.action}. ${m.q}</div>
-  <div class="panel"><svg id="actionSvg" viewBox="0 0 360 270"></svg></div>
-  <div class="rounds">Misiune ${cur+1} / 100 • dificultate ${d}/5</div>
-  <div id="actionControls"></div><div class="msg" id="amsg"></div>
-  <div class="row"><button class="btn alt" id="hintBtn">Indiciu</button><button class="btn" id="actionCheck" disabled>Verifică</button></div>`;
-  const svg=$('#actionSvg');
-  const g=svgEl('g',{}); svg.appendChild(g);
-  g.appendChild(R(8,8,344,254,18,'#F5F7FA','#CCD2DC'));
-  g.appendChild(T(180,34,m.title,17,900,'middle',COL.INK));
-  g.appendChild(T(180,58,'MISIUNE PRACTICĂ',10,800,'middle',COL.MUTE));
-  // animate a small installation: source -> switch -> load
-  g.appendChild(R(34,82,76,54,12,'#FFFFFF','#222')); g.appendChild(T(72,105,'TABLOU',11,800)); g.appendChild(T(72,122,'230 V',10,500));
-  g.appendChild(R(142,82,76,54,12,'#FFFFFF','#222')); g.appendChild(T(180,105,'COMANDĂ',10,800));
-  g.appendChild(R(250,82,76,54,12,'#FFFFFF','#222')); g.appendChild(T(288,105,'SARCINĂ',10,800));
-  g.appendChild(LN(110,109,142,109,COL.L,5)); g.appendChild(LN(218,109,250,109,COL.RET,5));
-  const led=svgEl('circle',{id:'aled',cx:288,cy:170,r:22,fill:'#FFF6D6',stroke:COL.INK,'stroke-width':2}); g.appendChild(led);
-  g.appendChild(T(288,208,'atinge elementele',11,700,'middle',COL.MUTE));
-  const controls=$('#actionControls');
-  if(m.kind==='meter'){
-    controls.innerHTML='<div class="row"><button class="btn alt" data-mode="OFF">OFF</button><button class="btn alt" data-mode="AC">AC V</button><button class="btn alt" data-mode="DC">DC V</button></div><div class="prompt" id="meterVal">--</div>';
-    controls.querySelectorAll('button').forEach(b=>b.onclick=()=>{audio(); phase=b.dataset.mode==='AC'?1:2; $('#actionCheck').disabled=phase!==1; $('#meterVal').textContent=phase===1?'230 V':'Alege AC V'; sClick();});
-  } else {
-    controls.innerHTML='<div class="prompt">Alege acțiunea corectă</div>'+m.opts.map((x,i)=>`<button class="opt" data-i="${i}">${x}</button>`).join('');
-    controls.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(solved)return; audio(); selected=+b.dataset.i; controls.querySelectorAll('.opt').forEach(x=>x.classList.remove('ok','bad')); b.classList.add('ok'); $('#actionCheck').disabled=false; sClick();});
-  }
-  $('#hintBtn').onclick=()=>{audio(); setMsg($('#amsg'),'info','Indiciu: '+m.why);};
-  $('#actionCheck').onclick=()=>{
-    if(solved){finish();return;}
-    let ok=(m.kind==='meter'?phase===1:selected===m.correct);
-    if(ok){solved=true; sOk(); $('#actionCheck').textContent='Continuă'; setMsg($('#amsg'),'ok','Corect! '+m.why); led.setAttribute('fill','#FFD54A'); led.setAttribute('filter','drop-shadow(0 0 8px #F5C400)'); $('#actionCheck').disabled=false;}
-    else{mistakes++; $('#pPts').textContent='greșeli: '+mistakes; sBad(); setMsg($('#amsg'),'bad','Nu este corect. Mai verifică instalația și încearcă din nou.');}
+  /* Simulator practic pentru nivelurile 7–100.
+     Fiecare nivel are o instalație parametrizată: borne, componente,
+     stări și defecte. Firele se trag cu degetul (pointer events) și se
+     fixează automat pe borne. */
+  const n=cur+1, idx=cur-6;
+  const kinds=['iluminat','priza','releu','motor','siguranta','multimetru','defect','serie','paralel','automatizare'];
+  const kind=kinds[idx%kinds.length];
+  const names={iluminat:'Circuit de iluminat',priza:'Circuit de priză',releu:'Comandă cu releu',motor:'Motor',siguranta:'Protecție',multimetru:'Măsurătoare',defect:'Depanare',serie:'Circuit serie',paralel:'Circuit paralel',automatizare:'Automatizare'};
+  const levelInKind=Math.floor(idx/kinds.length)+1;
+  const difficulty=Math.min(5,1+Math.floor(idx/20));
+
+  const variants={
+    iluminat:['Becul din hol','Becul din dormitor','Becul din bucătărie','Două corpuri','Iluminat cu temporizare','Iluminat cu senzor','Două puncte de comandă','Iluminat de scară','Corp cu LED','Circuit cu indicator'],
+    priza:['Priza din living','Priza din atelier','Priza dublă','Priza cu PE','Două prize','Circuit de prize','Consumator dedicat','Priză defectă','Priză cu indicator','Distribuție prize'],
+    releu:['Releu de comandă','Releu cu contact NO','Releu cu contact NC','Releu intermediar','Comandă contactor','Releu temporizat','Comandă pompă','Comandă ventilator','Releu cu buton','Releu cu indicator'],
+    motor:['Motor DC','Ventilator','Pompă','Motor cu releu','Motor cu protecție','Motor cu pornire','Motor cu oprire','Motor cu indicator','Motor cu defect','Motor automat'],
+    siguranta:['Siguranță C6','Siguranță C10','Siguranță C16','Diferențial','Protecție motor','Protecție consumator','Selectivitate','Declanșare','Resetare','Tablou mic'],
+    multimetru:['Tensiune AC','Continuitate','Rezistență','Tensiune la sarcină','Fir întrerupt','Bec ars','Siguranță arsă','Măsurare sursă','Măsurare consumator','Diagnostic'],
+    defect:['Fir întrerupt','Lipsă nul','Comutator blocat','Bec ars','Siguranță declanșată','PE greșit','Releu blocat','Motor oprit','Contact oxidat','Defect multiplu'],
+    serie:['Două becuri serie','Rezistențe serie','Lampă + rezistor','Circuit serie cu comutator','Serie cu măsurare','Serie cu defect','Serie cu două surse','Serie cu indicator','Serie cu sarcină','Serie final'],
+    paralel:['Două becuri paralel','Două prize paralel','Ramuri independente','Paralel cu întrerupător','Paralel cu releu','Paralel cu protecții','Paralel cu defect','Paralel cu indicator','Paralel cu motor','Paralel final'],
+    automatizare:['Senzor de lumină','Senzor de mișcare','Buton + releu','Temporizator','Ventilator automat','Pompă automată','Alarmă','Indicator automat','Două senzori','Instalație automată']
   };
-  // interactive SVG touch targets
-  [0,1,2].forEach(i=>{
-    const x=72+i*108, c=svgEl('circle',{cx:x,cy:170,r:18,fill:'transparent',stroke:'transparent'});
-    c.style.cursor='pointer'; c.addEventListener('click',()=>{audio(); const msg=['Tablou: verifică protecția.','Comandă: verifică poziția întrerupătorului.','Sarcină: verifică alimentarea și continuitatea.'][i]; setMsg($('#amsg'),'info',msg); if(i===1){led.setAttribute('fill','#FFD54A'); setTimeout(()=>{if(!solved)led.setAttribute('fill','#FFF6D6')},350);} }); svg.appendChild(c);
+  const title=variants[kind][(levelInKind-1)%10];
+  const tasks={
+    iluminat:'Construiește circuitul, apoi acționează întrerupătorul până când becul funcționează.',
+    priza:'Conectează L, N și PE la bornele corecte și verifică alimentarea.',
+    releu:'Conectează comanda releului și sarcina. Activează releul și observă contactul.',
+    motor:'Realizează conexiunile motorului, pornește-l și verifică protecția.',
+    siguranta:'Alege protecția, leagă circuitul și testează declanșarea/resetarea.',
+    multimetru:'Configurează multimetrul și măsoară punctele cerute de misiune.',
+    defect:'Găsește componenta defectă, repară conexiunea și repornește instalația.',
+    serie:'Leagă toate componentele în ordinea cerută și verifică circuitul.',
+    paralel:'Construiește ramurile paralele și verifică fiecare consumator.',
+    automatizare:'Leagă senzorul, comanda și consumatorul, apoi testează automatizarea.'
+  };
+  const faultKinds=['fir întrerupt','siguranță declanșată','bec ars','contact blocat','nul lipsă','releu blocat'];
+  const fault=faultKinds[idx%faultKinds.length];
+
+  const meterMode=idx%3===0?'AC V':idx%3===1?'Ω':'CONT';
+  const expectedValue=meterMode==='AC V'?230:(meterMode==='Ω'?(10+(idx%6)*5):'OL');
+
+  let selectedMode='';
+  let wires=[];
+  let solved=false;
+  let switchOn=false, breakerOn=true, relayOn=false, sensorOn=false;
+  let dragging=null, dragLine=null;
+
+  const ports=[
+    {id:'L',x:42,y:115,type:'src',color:'L',label:'L'},
+    {id:'N',x:42,y:170,type:'src',color:'N',label:'N'},
+    {id:'PE',x:42,y:225,type:'src',color:'PE',label:'PE'},
+    {id:'A',x:165,y:105,type:'dst',label:'A'},
+    {id:'B',x:165,y:175,type:'dst',label:'B'},
+    {id:'C',x:165,y:245,type:'dst',label:'C'},
+    {id:'D',x:280,y:105,type:'dst',label:'D'},
+    {id:'E',x:280,y:175,type:'dst',label:'E'},
+    {id:'F',x:280,y:245,type:'dst',label:'F'}
+  ];
+  // Schimbăm etichetele și traseul vizual în funcție de situație.
+  if(kind==='priza'){ ports[3].label='L'; ports[4].label='N'; ports[5].label='PE'; ports[6].label='LOAD L'; ports[7].label='LOAD N'; ports[8].label='LOAD PE'; }
+  if(kind==='releu'){ ports[3].label='A1'; ports[4].label='A2'; ports[5].label='COM'; ports[6].label='NO'; ports[7].label='LOAD L'; ports[8].label='LOAD N'; }
+  if(kind==='motor'){ ports[3].label='L'; ports[4].label='N'; ports[5].label='PE'; ports[6].label='M+'; ports[7].label='M-'; ports[8].label='PE M'; }
+  if(kind==='multimetru'){ ports[3].label='TEST A'; ports[4].label='TEST B'; ports[5].label='COM'; }
+
+  const expected=(kind==='priza')?['L>A','N>B','PE>C','A>D','B>E','C>F']:
+    (kind==='releu')?['L>A','N>B','A>C','C>D','D>E','N>F']:
+    (kind==='motor')?['L>A','N>B','PE>C','A>D','B>E','C>F']:
+    (kind==='multimetru')?['L>A','N>B']:
+    ['L>A','N>B','A>D','B>E'];
+
+  const key=(x,y)=>x+'>'+y;
+  const isExpected=(s,d)=>expected.includes(key(s,d));
+
+  $('#area').innerHTML=`
+    <div class="task"><b>Nivel ${n} • ${names[kind]}</b><br>${tasks[kind]}<br><small>Defect activ: <b>${fault}</b> • dificultate ${difficulty}/5</small></div>
+    <div class="panel"><svg id="simSvg" viewBox="0 0 360 330" style="touch-action:none"></svg></div>
+    <div class="row" id="simTools"></div>
+    <div class="prompt" id="simRead">Stare: instalația este oprită</div>
+    <div class="msg" id="simMsg"></div>
+    <div class="row"><button class="btn alt" id="simHint">Indiciu</button><button class="btn" id="simCheck">Verifică</button></div>`;
+
+  const svg=$('#simSvg');
+  const g=svgEl('g',{}); svg.appendChild(g);
+  g.appendChild(R(8,8,344,314,18,'#F5F7FA','#CCD2DC'));
+  g.appendChild(T(180,34,title,17,900));
+  g.appendChild(T(180,54,'TRAGE FIRUL DE LA BORNA COLORATĂ LA BORNA DESTINAȚIE',9,800,'middle',COL.MUTE));
+  // Elemente fizice
+  g.appendChild(R(25,70,62,190,12,'#fff','#222')); g.appendChild(T(56,90,'TABLOU',10,800));
+  const breaker=R(35,110,42,42,8,'#fff','#222'); breaker.setAttribute('id','breaker'); g.appendChild(breaker); g.appendChild(T(56,166,'C'+(10+(idx%3)*6),10,800));
+  g.appendChild(R(112,70,82,76,12,'#fff','#222')); g.appendChild(T(153,91,kind==='multimetru'?'MULTIMETRU':kind==='motor'?'MOTOR':'COMANDĂ',9,800));
+  const sw=svgEl('g',{id:'simSwitch',class:'swbox'}); sw.appendChild(R(122,106,62,30,7,'#fff','#222')); sw.appendChild(LN(136,121,170,121,COL.INK,3)); g.appendChild(sw);
+  g.appendChild(R(222,70,110,190,12,'#fff','#222')); g.appendChild(T(277,91,'SARCINĂ',10,800));
+  const lamp=svgEl('circle',{id:'simLamp',cx:277,cy:145,r:23,fill:'#FFF6D6',stroke:COL.INK,'stroke-width':2}); g.appendChild(lamp);
+  g.appendChild(T(277,182,kind==='motor'?'MOTOR':'BEC / CONSUMATOR',9,700));
+  const relay=svgEl('rect',{id:'relayBox',x:245,y:202,width:64,height:32,rx:7,fill:'#fff',stroke:COL.INK}); g.appendChild(relay); g.appendChild(T(277,222,'RELEU',8,800));
+  const faultLight=svgEl('circle',{id:'faultLight',cx:325,cy:48,r:7,fill:'#FF5A5A',opacity:.9}); g.appendChild(faultLight);
+  // borne
+  const P={};
+  ports.forEach(p=>{
+    P[p.id]=p;
+    const q=svgEl('g',{class:'simPort','data-id':p.id});
+    const fill=p.type==='src'?(COL[p.color]||COL.GRY):'#fff';
+    q.appendChild(svgEl('circle',{cx:p.x,cy:p.y,r:9,fill,stroke:COL.INK,'stroke-width':2,class:'ring'}));
+    q.appendChild(svgEl('circle',{cx:p.x,cy:p.y,r:20,fill:'transparent',class:'hit'}));
+    q.appendChild(T(p.x,p.y+(p.y<150?-14:18),p.label,8,800,'middle',COL.INK));
+    q.addEventListener('pointerdown',ev=>startDrag(ev,p.id));
+    svg.appendChild(q);
   });
+
+  function screenPoint(ev){ const r=svg.getBoundingClientRect(); return {x:(ev.clientX-r.left)*360/r.width,y:(ev.clientY-r.top)*330/r.height}; }
+  function startDrag(ev,id){
+    if(solved) return; ev.preventDefault(); audio();
+    if(!P[id]) return;
+    dragging=id;
+    const pt=screenPoint(ev);
+    dragLine=svgEl('line',{x1:P[id].x,y1:P[id].y,x2:pt.x,y2:pt.y,stroke:COL[P[id].color], 'stroke-width':5,'stroke-linecap':'round','stroke-dasharray':'7 7',opacity:.8});
+    svg.appendChild(dragLine); sClick();
+  }
+  svg.addEventListener('pointermove',ev=>{
+    if(!dragging||!dragLine) return; const pt=screenPoint(ev); dragLine.setAttribute('x2',pt.x); dragLine.setAttribute('y2',pt.y);
+  });
+  svg.addEventListener('pointerup',ev=>{
+    if(!dragging) return; const pt=screenPoint(ev); let hit=null,best=999;
+    Object.values(P).filter(p=>p.type==='dst').forEach(p=>{const d=Math.hypot(p.x-pt.x,p.y-pt.y); if(d<28&&d<best){best=d;hit=p;}});
+    if(dragLine){dragLine.remove();dragLine=null;}
+    if(hit){ wires=wires.filter(w=>w.dst!==hit.id); wires.push({src:dragging,dst:hit.id}); sClick(); redrawSim(); }
+    dragging=null;
+  });
+  svg.addEventListener('pointercancel',()=>{if(dragLine){dragLine.remove();dragLine=null;}dragging=null;});
+
+  function redrawSim(){
+    svg.querySelectorAll('.simWire').forEach(x=>x.remove());
+    wires.forEach((w,i)=>{
+      const a=P[w.src],b=P[w.dst];
+      const line=svgEl('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:COL[a.color], 'stroke-width':5,'stroke-linecap':'round',class:'simWire'});
+      line.addEventListener('pointerdown',()=>{ if(solved)return; wires=wires.filter(x=>x!==w); redrawSim(); sClick(); });
+      svg.insertBefore(line,svg.firstChild.nextSibling);
+    });
+    document.querySelectorAll('#simSvg .simPort').forEach(q=>{const id=q.dataset.id;q.classList.toggle('done',wires.some(w=>w.src===id||w.dst===id));});
+  }
+
+  function energize(on){
+    const lampOn=on&&breakerOn&&(kind!=='defect'||fault!=='bec ars');
+    $('#simLamp').setAttribute('fill',lampOn?'#FFD54A':'#FFF6D6');
+    $('#simLamp').style.filter=lampOn?'drop-shadow(0 0 10px #F5C400)':'';
+    $('#relayBox').setAttribute('fill',relayOn?'#FFE08A':'#fff');
+    $('#simRead').textContent=on?'Stare: circuit alimentat • '+(kind==='motor'?'motorul funcționează': 'sarcina este activă'):'Stare: instalația este oprită';
+    if(on)sOn(); else sOff();
+  }
+
+  // unelte specifice nivelului
+  const tools=$('#simTools');
+  if(kind==='multimetru'){
+    tools.innerHTML='<button class="btn alt" data-m="AC V">AC V</button><button class="btn alt" data-m="Ω">Ω</button><button class="btn alt" data-m="CONT">CONT</button><button class="btn alt" id="measure">Măsoară</button>';
+    tools.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{selectedMode=b.dataset.m; audio(); setMsg($('#simMsg'),'info','Mod ales: '+selectedMode);});
+    $('#measure').onclick=()=>{audio(); if(selectedMode===meterMode){setMsg($('#simMsg'),'ok','Măsurătoare corectă: '+expectedValue+(meterMode==='AC V'?' V':'')); sOk();}else{mistakes++;$('#pPts').textContent='greșeli: '+mistakes;sBad();setMsg($('#simMsg'),'bad','Alege modul potrivit înainte de măsurare.');}};
+  } else {
+    tools.innerHTML='<button class="btn alt" id="toggleBreaker">Siguranță</button><button class="btn alt" id="toggleSwitch">Întrerupător</button><button class="btn alt" id="toggleRelay">Releu</button>';
+    $('#toggleBreaker').onclick=()=>{audio();breakerOn=!breakerOn;$('#breaker').setAttribute('fill',breakerOn?'#D9F7E4':'#FFD0D0');setMsg($('#simMsg'),'info',breakerOn?'Siguranța este cuplată.':'Siguranța a declanșat.');};
+    $('#toggleSwitch').onclick=()=>{audio();switchOn=!switchOn;sw.classList.toggle('live',switchOn);relayOn=kind==='releu'&&switchOn;energize(switchOn&&breakerOn);};
+    $('#toggleRelay').onclick=()=>{audio();relayOn=!relayOn;energize(relayOn&&breakerOn);};
+  }
+  $('#simHint').onclick=()=>{audio(); const hints={priza:'L→L, N→N, PE→PE. Pentru sarcină, continuă fiecare conductor până la consumator.',releu:'A1/A2 sunt comanda; COM și NO controlează sarcina.',motor:'Leagă L, N și PE la bornele corespunzătoare, apoi cuplează protecția.',multimetru:'Alege același mod ca mărimea cerută de misiune.',defect:'Urmărește firul de la sursă spre sarcină și verifică protecția.',siguranta:'Protecția trebuie să fie activă înainte de test.',iluminat:'Întrerupătorul trebuie să comande circuitul, nu să ocolească sarcina.',serie:'Toate componentele trebuie să formeze o singură cale.',paralel:'Fiecare ramură trebuie să aibă alimentarea ei.',automatizare:'Senzorul comandă releul, iar releul comandă sarcina.'}; setMsg($('#simMsg'),'info','Indiciu: '+hints[kind]);};
+
+  $('#simCheck').onclick=()=>{
+    if(solved){finish();return;}
+    let ok;
+    if(kind==='multimetru') ok=selectedMode===meterMode;
+    else ok=expected.every(e=>wires.some(w=>key(w.src,w.dst)===e));
+    // Defectul cere și o acțiune de reset/oprire înainte de verificare.
+    if(kind==='defect') ok=ok&&breakerOn;
+    if(ok){
+      solved=true; sOk(); faultLight.setAttribute('fill','#2ECC71');
+      setMsg($('#simMsg'),'ok','Instalația funcționează! Acum poți interacționa cu componentele și observa reacția circuitului.');
+      $('#simCheck').textContent='Continuă';
+      if(kind!=='multimetru') energize((switchOn||relayOn||sensorOn)&&breakerOn);
+      // reacție: scântei numai ca efect vizual al simulatorului, nu instrucțiune reală
+      if(idx%7===0){ setTimeout(()=>{faultLight.setAttribute('fill','#FFD54A');},350); }
+    }else{
+      mistakes++; $('#pPts').textContent='greșeli: '+mistakes; sZap();
+      svg.classList.remove('zap'); void svg.offsetWidth; svg.classList.add('zap');
+      const badWire=wires.find(w=>!isExpected(w.src,w.dst));
+      if(badWire) setMsg($('#simMsg'),'bad','Conexiune greșită: '+badWire.src+' → '+badWire.dst+'. Firul a produs o eroare de simulare.');
+      else setMsg($('#simMsg'),'bad','Mai lipsește o conexiune sau o acțiune. Verifică bornele, siguranța și comanda.');
+    }
+  };
+  redrawSim();
 }
 
 /* ================= MOTORUL SCENELOR CU FIRE ================= */
@@ -632,5 +773,167 @@ document.addEventListener('touchstart',audio,{once:true});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 renderHome();
 </script>
+
+<style>
+#simOverlay{position:fixed;inset:0;background:rgba(5,9,18,.96);z-index:99999;display:none;color:#eef4ff;font-family:system-ui,sans-serif}
+#simOverlay .simTop{height:58px;display:flex;align-items:center;gap:10px;padding:0 14px;background:#101827;border-bottom:1px solid #26364f}
+#simOverlay .simTop b{font-size:18px}.simBtn{border:0;border-radius:9px;padding:9px 12px;background:#263852;color:#fff;font-weight:700}
+#simOverlay .simBtn.on{background:#157f58}.simGrid{height:calc(100% - 58px);display:grid;grid-template-columns:1fr 300px;gap:10px;padding:10px;box-sizing:border-box}
+#simCanvas{width:100%;height:100%;background:#0b1220;border:1px solid #26364f;border-radius:12px;touch-action:none}
+#simPanel{background:#111b2b;border:1px solid #26364f;border-radius:12px;padding:12px;overflow:auto}
+#simPanel h3{margin:4px 0 10px}.part{display:flex;justify-content:space-between;align-items:center;background:#17243a;padding:9px;border-radius:8px;margin:7px 0}
+#simStatus{padding:10px;border-radius:8px;background:#18283d;margin-bottom:10px;line-height:1.35}
+#meter{font-family:monospace;background:#050a12;border:1px solid #30435f;border-radius:8px;padding:12px;font-size:22px;text-align:center}
+@media(max-width:800px){.simGrid{grid-template-columns:1fr 235px}.simTop{height:52px}.simBtn{padding:8px 9px}}
+</style>
+<div id="simOverlay">
+  <div class="simTop">
+    <b id="simTitle">Simulator electric</b>
+    <button class="simBtn" id="simPower">⚡ Alimentare</button>
+    <button class="simBtn" id="simMeterBtn">📟 Multimetru</button>
+    <button class="simBtn" id="simReset">↻ Reset</button>
+    <button class="simBtn" id="simClose">✕</button>
+  </div>
+  <div class="simGrid">
+    <canvas id="simCanvas"></canvas>
+    <div id="simPanel">
+      <div id="simStatus">Atinge bornele pentru a trage un conductor. Conectează corect circuitul.</div>
+      <h3>Componente</h3>
+      <div id="parts"></div>
+      <h3>Multimetru</h3>
+      <div id="meter">OFF</div>
+      <div style="font-size:12px;opacity:.75;margin-top:10px">
+        Modul interactiv: fire, întrerupătoare, siguranță, releu, bec și măsurători.
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+"use strict";
+const O=document.getElementById("simOverlay"), C=document.getElementById("simCanvas"), X=C.getContext("2d");
+const statusEl=document.getElementById("simStatus"), partsEl=document.getElementById("parts"), meterEl=document.getElementById("meter");
+let powered=false,meter=false,drag=null, wires=[], nodes=[], currentLevel=7, completed=false;
+
+const TYPES=["Iluminat","Prize","Cap-scară","Tablou","Măsurători","Defect","Releu","Motor","Trifazat","Misiune finală"];
+function levelCfg(n){
+  const cat=Math.min(9,Math.floor((n-7)/10));
+  return {cat,name:TYPES[cat],lamp:n%3!==0,switch:n%2===0,fuse:true,relay:n>=47,motor:n>=67,defect:n%4===0,meter:n>=47};
+}
+function resize(){
+  const r=C.getBoundingClientRect(),d=devicePixelRatio||1;
+  C.width=Math.max(1,r.width*d);C.height=Math.max(1,r.height*d);X.setTransform(d,0,0,d,0,0);draw();
+}
+function setup(n){
+  currentLevel=n; completed=false; powered=false; meter=false; wires=[];
+  const w=C.clientWidth,h=C.clientHeight;
+  nodes=[
+    {id:"L",x:w*.12,y:h*.25,label:"L / Fază",kind:"source"},
+    {id:"N",x:w*.12,y:h*.72,label:"N / Nul",kind:"source"},
+    {id:"F1",x:w*.34,y:h*.25,label:"SIGURANȚĂ",kind:"fuse"},
+    {id:"S1",x:w*.54,y:h*.25,label:"ÎNTRERUPĂTOR",kind:"switch",closed:false},
+    {id:"R1",x:w*.72,y:h*.25,label:"RELEU",kind:"relay"},
+    {id:"B1",x:w*.84,y:h*.50,label:"BEC / SARCINĂ",kind:"load"},
+    {id:"PE",x:w*.34,y:h*.72,label:"PE",kind:"earth"}
+  ];
+  renderParts(); updateStatus("Nivel "+n+": "+levelCfg(n).name+". Conectează circuitul și apoi alimentează-l.");
+  draw();
+}
+function renderParts(){
+  const c=levelCfg(currentLevel);
+  partsEl.innerHTML="";
+  [["SIGURANȚĂ","fuse"],["ÎNTRERUPĂTOR","switch"],["RELEU","relay"],["BEC/SARCINĂ","load"]].forEach(([name,k])=>{
+    const d=document.createElement("div");d.className="part";d.innerHTML="<span>"+name+"</span><button class='simBtn' data-k='"+k+"'>COMUTĂ</button>";
+    if(k==="relay"&&!c.relay)d.style.opacity=".35;
+    d.querySelector("button").onclick=()=>togglePart(k);
+    partsEl.appendChild(d);
+  });
+}
+function togglePart(k){
+  const n=nodes.find(x=>x.kind===k);
+  if(!n)return;
+  if(k==="switch") n.closed=!n.closed;
+  if(k==="fuse") n.blown=!n.blown;
+  if(k==="relay") n.active=!n.active;
+  draw();check();
+}
+function updateStatus(t){statusEl.textContent=t}
+function hit(x,y){
+  let best=null,dist=999;
+  for(const n of nodes){let d=Math.hypot(n.x-x,n.y-y);if(d<dist&&d<34){dist=d;best=n}}
+  return best;
+}
+function has(a,b){return wires.some(w=>(w[0]===a&&w[1]===b)||(w[0]===b&&w[1]===a))}
+function connect(a,b){
+  if(a.id===b.id||has(a.id,b.id))return;
+  wires.push([a.id,b.id]);draw();check();
+}
+C.addEventListener("pointerdown",e=>{
+  const r=C.getBoundingClientRect(),n=hit(e.clientX-r.left,e.clientY-r.top);
+  if(n){drag=n;C.setPointerCapture(e.pointerId)}
+});
+C.addEventListener("pointerup",e=>{
+  if(!drag)return;
+  const r=C.getBoundingClientRect(),n=hit(e.clientX-r.left,e.clientY-r.top);
+  if(n&&n!==drag)connect(drag,n);
+  drag=null;draw();
+});
+function poweredPath(){
+  const adj={};nodes.forEach(n=>adj[n.id]=[]);
+  wires.forEach(([a,b])=>{adj[a].push(b);adj[b].push(a)});
+  const start="L",target="B1",q=[start],seen=new Set([start]);
+  while(q.length){const id=q.shift();if(id===target)return true;
+    const n=nodes.find(x=>x.id===id);
+    if(n?.kind==="fuse"&&n.blown)continue;
+    if(n?.kind==="switch"&&n.closed===false)continue;
+    for(const z of adj[id]||[])if(!seen.has(z)){seen.add(z);q.push(z)}
+  } return false;
+}
+function check(){
+  const path=poweredPath();
+  const safe=!(nodes.find(n=>n.kind==="fuse")?.blown);
+  if(powered&&path&&safe){
+    completed=true; updateStatus("🟢 Circuit activ! Sarcina primește energie. Nivel rezolvat!");
+  }else if(powered&&!path){
+    updateStatus("🔴 Circuitul nu este închis. Verifică firele, întrerupătorul și siguranța.");
+  }
+  draw();
+}
+function draw(){
+  if(!C.width)return;
+  const w=C.clientWidth,h=C.clientHeight;X.clearRect(0,0,w,h);
+  X.fillStyle="#0b1220";X.fillRect(0,0,w,h);
+  X.strokeStyle="#17263c";X.lineWidth=1;
+  for(let x=0;x<w;x+=40){X.beginPath();X.moveTo(x,0);X.lineTo(x,h);X.stroke()}
+  for(let y=0;y<h;y+=40){X.beginPath();X.moveTo(0,y);X.lineTo(w,y);X.stroke()}
+  for(const [a,b] of wires){const A=nodes.find(n=>n.id===a),B=nodes.find(n=>n.id===b);X.strokeStyle=powered?"#35e68a":"#54a9ff";X.lineWidth=5;X.beginPath();X.moveTo(A.x,A.y);X.lineTo(B.x,B.y);X.stroke()}
+  for(const n of nodes){
+    X.beginPath();X.arc(n.x,n.y,22,0,Math.PI*2);
+    X.fillStyle=n.kind==="load"&&completed?"#f6c84c":n.kind==="source"?"#245b8f":"#25354d";X.fill();
+    X.strokeStyle="#b8c8df";X.stroke();
+    X.fillStyle="#fff";X.font="12px system-ui";X.textAlign="center";X.fillText(n.label,n.x,n.y+42);
+    if(n.kind==="switch")X.fillText(n.closed?"ON":"OFF",n.x,n.y+4);
+    if(n.kind==="fuse")X.fillText(n.blown?"ARSĂ":"OK",n.x,n.y+4);
+  }
+}
+document.getElementById("simPower").onclick=()=>{
+  const f=nodes.find(n=>n.kind==="fuse");
+  powered=!powered;
+  if(f&&f.blown)powered=false;
+  document.getElementById("simPower").classList.toggle("on",powered);
+  updateStatus(powered?"⚡ Alimentarea este pornită.":"Alimentarea este oprită.");
+  check();
+};
+document.getElementById("simMeterBtn").onclick=()=>{
+  meter=!meter;document.getElementById("simMeterBtn").classList.toggle("on",meter);
+  meterEl.textContent=meter?(powered?(poweredPath()?"230.0 V AC":"0.0 V"):"0.0 V"):"OFF";
+};
+document.getElementById("simReset").onclick=()=>setup(currentLevel);
+document.getElementById("simClose").onclick=()=>O.style.display="none";
+window.startElectricianSimulator=function(n){O.style.display="block";requestAnimationFrame(()=>{resize();setup(n||7)})};
+window.addEventListener("resize",resize);
+})();
+</script>
+
 </body>
 </html>
